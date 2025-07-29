@@ -12,6 +12,25 @@
 
 想要实现单纯的 excel 文件预览，而不需要编辑能力，目前已有的开源库几乎都很重。
 
+## 使用方式
+
+```jsx
+<ExcelPreview
+    url="/example1.xlsx"
+    onInitLoad={() => {
+      console.log('onInitLoad');
+    }}
+    onError={(err) => {
+      console.log('onError', err);
+    }}
+    LoadingComponent={({ message }) => (
+      <div>
+        <p style={{ color: 'blue' }}>{message}</p>
+      </div>
+    )}
+/>
+```
+
 ## 介绍
 
 从零手撸一个 excel 文件预览，支持 .xlsx / .xls / .csv 格式文件预览。
