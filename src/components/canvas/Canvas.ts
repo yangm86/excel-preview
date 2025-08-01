@@ -1,4 +1,4 @@
-import type { SheetItem } from '../excel/types.ts';
+import type { SheetItem } from '../Excel/types.ts';
 import { w2px, h2px, argb2rgb, getFontColor } from './utils.ts';
 import type {
   Cell as ExcelCell,

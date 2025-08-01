@@ -2,7 +2,7 @@
 
 ![](./screenshot.jpg)
 
-一个轻量的预览 .xlsx / .xls / .csv 格式文件的 react 组件。
+使用 canvas 实现的一个轻量的预览 .xlsx / .xls / .csv 格式文件的 react 组件。
 
 ## 背景
 
@@ -15,20 +15,28 @@
 ## 使用方式
 
 ```jsx
-<ExcelPreview
-    url="/example1.xlsx"
-    onInitLoad={() => {
-      console.log('onInitLoad');
-    }}
-    onError={(err) => {
-      console.log('onError', err);
-    }}
-    LoadingComponent={({ message }) => (
-      <div>
-        <p style={{ color: 'blue' }}>{message}</p>
-      </div>
-    )}
-/>
+import ExcelPreview from 'react-preview-excel'
+
+export default function App() {
+  return (
+    <div style={{ width: '100%', height: '100vh' }}>
+      <ExcelPreview
+        url="/example1.xlsx"
+        onInitLoad={() => {
+          console.log('onInitLoad');
+        }}
+        onError={(err) => {
+          console.log('onError', err);
+        }}
+        LoadingComponent={({ message }) => (
+          <div>
+            <p style={{ color: 'blue' }}>{message}</p>
+          </div>
+        )}
+      />
+    </div>
+  )
+}
 ```
 
 ## 介绍
