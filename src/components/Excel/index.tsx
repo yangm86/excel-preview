@@ -1,9 +1,11 @@
 import React from 'react';
+import type {MouseEventHandler} from 'react'
 import ExcelJS from 'exceljs';
 import type { Worksheet, Workbook, Row, Column, Cell } from 'exceljs';
 import { useEffect, useRef, useState } from 'react';
 import type { Merge, SheetItem } from './types';
 import { ExcelCanvas } from '../canvas/Canvas.ts';
+import type { CellInfo } from '../canvas/Canvas.ts';
 import * as XLSX from 'xlsx';
 import { virtualScroll } from './scroll';
 
@@ -30,11 +32,45 @@ const parseUnLogin = (text: string) => {
 function Excel(props: ExcelProps) {
   const [sheetList, setSheetList] = useState<SheetItem[]>([]);
   const [currentSheetId, setCurrentSheetId] = useState<number>();
-  const ref = useRef<HTMLCanvasElement>(null);
+
   const [loading, setLoading] = useState<boolean>();
   const [loadingMessage, setLoadingMessage] = useState<string>();
+
+  const ref = useRef<HTMLCanvasElement>(null);
   const excelCanvasInstance = useRef<ExcelCanvas>();
   const rootRef = useRef<HTMLDivElement>(null);
+  const selectCellRef = useRef<CellInfo['id']>();
+  const selectCellDivRef = useRef<HTMLDivElement>(null);
+
+  const updateSelectCellStyle = () => {
+    if (selectCellRef.current && selectCellDivRef.current && excelCanvasInstance.current) {
+      const cell = excelCanvasInstance.current.cellsInfo.find((item) => item.id === selectCellRef.current)
+
+      if (!cell) return
+
+      const {x, y, width, height} = cell
+      selectCellDivRef.current.style.top = `${y}px`
+      selectCellDivRef.current.style.left = `${x}px`
+      selectCellDivRef.current.style.width = `${width}px`
+      selectCellDivRef.current.style.height = `${height}px`
+    }
+  }
+
+  // 单元格选中
+  const handleCanvasClick: MouseEventHandler<HTMLCanvasElement> = (e) => {
+    // 根据单元格信息找到该单元格
+    const cell = excelCanvasInstance.current?.cellsInfo.find((item) => {
+      if (e.pageX >= item.x && e.pageX <= item.x + item.width && e.pageY >= item.y && e.pageY <= item.y + item.height) {
+        return true
+      }
+    })
+
+    if (cell && selectCellDivRef.current) {
+      selectCellRef.current = cell.id
+      selectCellDivRef.current.style.removeProperty('display');
+      updateSelectCellStyle()
+    }
+  }
 
   useEffect(() => {
     if (!props.url) return;
@@ -215,6 +251,8 @@ function Excel(props: ExcelProps) {
             currentRender.destroy();
             currentRender.render().then(() => {
               virtualScroll.renderScrollbar(currentRender.ctx);
+              // 更新选中的单元格位置
+              updateSelectCellStyle()
             });
           });
         },
@@ -285,7 +323,21 @@ function Excel(props: ExcelProps) {
           overflow: 'auto',
         }}
       >
-        <canvas ref={ref} />
+        <canvas
+          ref={ref}
+          onClick={handleCanvasClick}
+        />
+
+        <div
+          ref={selectCellDivRef}
+          className="excel-preview__single-select"
+          style={{
+            display: 'none',
+            position: 'absolute',
+            borderWidth: 0,
+            boxShadow: 'rgb(16, 153, 104) 0px 0px 0px 1.5px'
+          }}
+        />
 
         <div
           className="excel-preview__bar"

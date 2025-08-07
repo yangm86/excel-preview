@@ -51,6 +51,15 @@ const defaultFont = {
 
 type TextStyleFn = (index: number) => Cell['style'] | undefined;
 type TextStyle = Cell['style'] | TextStyleFn;
+export type CellInfo = {
+  id: string;
+  x: number;
+  y: number;
+  col: number;
+  row: number;
+  width: number;
+  height: number;
+};
 
 export class ExcelCanvas {
   private sheetItem: SheetItem;
@@ -65,19 +74,12 @@ export class ExcelCanvas {
   onInitLoad: ExcelCanvasOptions['onInitLoad'];
   onError: ExcelCanvasOptions['onError'];
 
-  private viewport: ExcelCanvasOptions['viewport'];
+  public viewport: ExcelCanvasOptions['viewport'];
 
   private renderColumns: Column[] = [];
   private renderRows: Row[] = [];
 
-  private cellsInfo: Array<{
-    x: number;
-    y: number;
-    col: number;
-    row: number;
-    width: number;
-    height: number;
-  }> = [];
+  public cellsInfo: CellInfo[] = [];
 
   constructor(options: ExcelCanvasOptions) {
     this.sheetItem = options.sheetItem;
@@ -147,6 +149,7 @@ export class ExcelCanvas {
     let cellLeft = indexColumnWidth;
     let scrollXDiff: number | undefined = undefined;
     this.renderColumns = columns.filter((col) => {
+      // console.log(col)
       const colLeft = cellLeft;
       const colRight = cellLeft + w2px(col.width);
 
@@ -202,9 +205,9 @@ export class ExcelCanvas {
     // console.log('渲染行', this.renderRows[0].number, this.renderRows[this.renderRows.length - 1].number)
   }
 
-  zoom(scale: number) {
-    this.ctx.scale(this.dpr + scale, this.dpr + scale);
-  }
+  // zoom(scale: number) {
+  //   this.ctx.scale(this.dpr + scale, this.dpr + scale);
+  // }
 
   setDefaultFont(
     font: {
@@ -222,6 +225,8 @@ export class ExcelCanvas {
   }
 
   async render() {
+    this.cellsInfo = []
+
     const {
       worksheet: {
         properties: { defaultRowHeight },
@@ -279,6 +284,17 @@ export class ExcelCanvas {
                 0,
               );
 
+              // 缓存格子信息
+              this.cellsInfo.push({
+                id: cell._address,
+                x: calWidth,
+                y: calHeight,
+                width: cellWidthMerge,
+                height: cellHeightMerge,
+                row: cell._row.number - 1,
+                col: cell._column.number - 1,
+              });
+
               this.renderCell(
                 calWidth,
                 calHeight,
@@ -312,6 +328,7 @@ export class ExcelCanvas {
         } else {
           // 缓存格子信息
           this.cellsInfo.push({
+            id: cell._address,
             x: calWidth,
             y: calHeight,
             width: cellW,
