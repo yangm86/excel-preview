@@ -98,3 +98,15 @@ export function getFontColor(font: Cell['style']['font']): string {
 
   return '#000000';
 }
+
+export function isCellInViewport(cellInfo: { cellLeft: number, cellTop: number, cellRight: number, cellBottom: number }, viewportInfo: { scrollX: number, scrollY: number, width: number, height: number }) {
+  const { cellLeft, cellTop, cellRight, cellBottom } = cellInfo;
+  const { scrollX, scrollY, width, height } = viewportInfo;
+
+  return (
+    cellLeft < scrollX + width &&
+    cellRight > scrollX &&
+    cellTop < scrollY + height &&
+    cellBottom > scrollY
+  );
+}

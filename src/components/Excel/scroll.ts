@@ -20,6 +20,7 @@ export const virtualScroll = {
     contentHeight: number,
     renderViewport: () => void,
   ) {
+    // console.log(viewportWidth, viewportHeight, contentWidth, contentHeight)
     this.viewportHeight = viewportHeight;
     this.contentWidth = contentWidth;
     this.contentHeight = contentHeight;

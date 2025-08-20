@@ -130,7 +130,9 @@ export class ExcelCanvas {
       });
   }
 
-  // 计算当前视口返回+滚动条位置下展示哪些单元格
+  // 计算当前视口返回+滚动条位置下
+  // 展示哪些行、列数据
+  // 以及滚动差值
   calculateRenderCells(currentScroll?: { scrollX: number; scrollY: number }) {
     const {
       columns,
@@ -147,58 +149,90 @@ export class ExcelCanvas {
       currentScroll?.scrollY ?? this.viewport.scrollY);
 
     let cellLeft = indexColumnWidth;
+    // 单元格滚动一部分的差值
     let scrollXDiff: number | undefined = undefined;
-    this.renderColumns = columns.filter((col) => {
-      // console.log(col)
-      const colLeft = cellLeft;
-      const colRight = cellLeft + w2px(col.width);
-
-      // 1. 针对列：左侧视口相交、完全包含、右侧视口相交
-      const isColumnInViewport =
-        (colLeft <= scrollX &&
-          colRight < scrollX + width &&
-          colRight > scrollX) ||
-        (colLeft >= scrollX && colRight <= scrollX + width) ||
-        (colLeft >= scrollX &&
-          colLeft < scrollX + width &&
-          colRight > scrollX + width);
-
-      // 计算当前单元格的滚动差值
-      if (isColumnInViewport && scrollXDiff === undefined) {
-        scrollXDiff = scrollX - cellLeft + indexColumnWidth;
-      }
-
-      cellLeft += w2px(col.width);
-
-      return isColumnInViewport;
-    });
-    this.viewport.scrollXDiff = scrollXDiff;
 
     let cellTop = h2px(defaultRowHeight);
     let scrollYDiff: number | undefined = undefined;
-    this.renderRows = rows.filter((row) => {
-      const rowTop = cellTop;
-      const rowBottom = cellTop + h2px(row.height);
 
-      // 1. 针对行：上侧视口相交、完全包含、下侧视口相交
-      const isRowInViewport =
-        (rowTop <= scrollY &&
-          rowBottom < scrollY + height &&
-          rowBottom > scrollY) ||
-        (rowTop >= scrollY && rowBottom <= scrollY + height) ||
-        (rowTop >= scrollY &&
-          rowTop < scrollY + height &&
-          rowBottom > scrollY + height);
+    this.renderColumns = []
+    this.renderRows = []
+    rows.forEach(row => {
+      cellLeft = indexColumnWidth;
 
-      // 计算当前单元格的滚动差值
-      if (isRowInViewport && scrollYDiff === undefined) {
-        scrollYDiff = scrollY - cellTop + h2px(defaultRowHeight);
-      }
+      columns.forEach(column => {
+        const cell = row.getCell(column.number) as Cell;
+        const cellWidth = w2px(column.width);
+        const cellHeight = h2px(row.height);
+
+        const isColumnInViewport = cellLeft < scrollX + width &&
+          cellLeft + cellWidth > scrollX
+        const isColumnPushAble = () => isColumnInViewport && this.renderColumns.every(x => x.number !== column.number)
+
+        const isRowInViewport = cellTop < scrollY + height &&
+          cellTop + cellHeight > scrollY
+        const isRowPushAble = () => isRowInViewport && this.renderRows.every(x => x.number !== row.number)
+
+        if (cell.isMerged) {
+          const merge = this.sheetItem.merges.find(
+            (item) => item.address === cell.master._address,
+          );
+          if (merge) {
+            // 合并的单元格中有在 viewport 的，需要将合并的单元格都渲染出来
+            if ((isRowInViewport && isColumnInViewport)) {
+              merge.cells.forEach(_cellMerge => {
+                const cellMerge = _cellMerge as Cell
+                if (this.renderRows.every(x => x.number !== cellMerge._row.number)) {
+                  this.renderRows.push(cellMerge._row)
+                }
+                if (this.renderColumns.every(x => x.number !== cellMerge._column.number)) {
+                  this.renderColumns.push(cellMerge._column)
+                }
+              })
+
+              // const cellLeftMerge = merge.cells.slice(0, index).reduce((pre, cur) => pre + w2px(cur._column.width), 0)
+              // const cellTopMerge = merge.cells.slice(0, index).reduce((pre, cur) => pre + h2px(cur._row.height), 0)
+
+              // 此时，滚动条应该处于合并的大格子上，差值就是当前滚动的距离
+              if (scrollXDiff === undefined) {
+                // console.log('scrollX cellLeftMerge', scrollX, cellLeftMerge)
+                scrollXDiff = scrollX
+              }
+
+              if (scrollYDiff === undefined) {
+                scrollYDiff = scrollY
+              }
+            }
+          }
+        }
+
+        if (cell._address === 'AL1') {
+          // console.log('isColumnInViewport', cellLeft, cellLeft + cellWidth, scrollX, scrollX + width, isColumnInViewportFn(cellLeft, cellLeft + cellWidth))
+        }
+
+        if (isColumnPushAble()) {
+          this.renderColumns.push(column)
+
+          if (scrollXDiff === undefined) {
+            scrollXDiff = scrollX - cellLeft + indexColumnWidth;
+          }
+        }
+
+        if (isRowPushAble()) {
+          this.renderRows.push(row)
+
+          if (scrollYDiff === undefined) {
+            scrollYDiff = scrollY - cellTop + h2px(defaultRowHeight);
+          }
+        }
+
+        cellLeft += w2px(column.width);
+      })
 
       cellTop += h2px(row.height);
+    })
 
-      return isRowInViewport;
-    });
+    this.viewport.scrollXDiff = scrollXDiff;
     this.viewport.scrollYDiff = scrollYDiff;
 
     // console.log('渲染列', this.renderColumns[0].letter, this.renderColumns[this.renderColumns.length - 1].letter)
@@ -250,8 +284,9 @@ export class ExcelCanvas {
         // 获取每一个单元格
         const cell = row.getCell(column.number) as Cell;
 
-        if (cell._address === 'E3') {
+        if (cell._address === 'A3') {
           // console.log(cell.model.type, cell.value)
+          // console.log('x scrollXDiff', calWidth, scrollXDiff)
         }
 
         const cellW = w2px(cell._column.width);
