@@ -59,6 +59,7 @@ export type CellInfo = {
   row: number;
   width: number;
   height: number;
+  text: string;
 };
 
 export class ExcelCanvas {
@@ -321,6 +322,7 @@ export class ExcelCanvas {
                 height: cellHeightMerge,
                 row: cell._row.number - 1,
                 col: cell._column.number - 1,
+                text: cell.text
               });
 
               this.renderCell(
@@ -363,6 +365,7 @@ export class ExcelCanvas {
             height: cellH,
             row: cell._row.number - 1,
             col: cell._column.number - 1,
+            text: cell.text
           });
           this.renderCell(calWidth, calHeight, cellW, cellH, cell.style);
           const richText = (cell.value as CellRichTextValue)?.richText;

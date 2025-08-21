@@ -8,6 +8,7 @@ import { ExcelCanvas } from '../canvas/Canvas.ts';
 import type { CellInfo } from '../canvas/Canvas.ts';
 import * as XLSX from 'xlsx';
 import { virtualScroll } from './scroll';
+import {copyText, h2px} from "../canvas/utils.ts";
 
 type ExcelProps = {
   url: string;
@@ -53,6 +54,38 @@ function Excel(props: ExcelProps) {
       selectCellDivRef.current.style.left = `${x}px`
       selectCellDivRef.current.style.width = `${width}px`
       selectCellDivRef.current.style.height = `${height}px`
+      selectCellDivRef.current.style.borderStyle = 'solid'
+
+      // 处理单元格选中时的边框裁剪
+      const tRowHeight = h2px(18)
+      const tColWidth = 50
+
+      let topLeftX = '0%'
+      let topLeftY = '0%'
+      let topRightX = '100%'
+      let topRightY = '0%'
+      let bottomRightX = '100%'
+      let bottomRightY = '100%'
+      let bottomLeftX = '0%'
+      let bottomLeftY = '100%'
+
+      const { width: rootWidth, height: rootHeight } = rootRef.current!.getBoundingClientRect();
+      if (x < tColWidth) {
+        bottomLeftX = topLeftX = `${-x + tColWidth}px`
+      }
+      if (y < tRowHeight) {
+        topLeftY = topRightY = `${-y + tRowHeight - 2}px`
+      }
+
+      if (x + width > rootWidth) {
+        bottomRightX = topRightX = `${x + width}px`
+      }
+      if (y + height > rootHeight) {
+        bottomRightY = bottomLeftY = `${y + height}px`
+      }
+
+      selectCellDivRef.current.style.clipPath = `polygon(${topLeftX} ${topLeftY}, ${topRightX} ${topRightY}, ${bottomRightX} ${bottomRightY}, ${bottomLeftX} ${bottomLeftY})`
+      // console.log('selectCellDivRef.current.style.clipPath', selectCellDivRef.current.style.clipPath)
     }
   }
 
@@ -77,6 +110,22 @@ function Excel(props: ExcelProps) {
 
     setLoading(true);
     setLoadingMessage('文件加载中...');
+
+    // 监听 ctrl+c 复制事件
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // e.preventDefault()
+        const cell = excelCanvasInstance.current?.cellsInfo.find(x => x.id === selectCellRef.current)
+        // console.log(cell?.text)
+        if (cell?.text) {
+          copyText(cell.text)
+          if (selectCellDivRef.current) {
+            selectCellDivRef.current.style.borderStyle = 'dashed'
+          }
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKey)
 
     let responseContentType: string;
     fetch(props.url)
@@ -181,6 +230,10 @@ function Excel(props: ExcelProps) {
         setLoadingMessage(err.message);
         props.onError?.(err);
       });
+
+    return () => {
+      window.removeEventListener('keydown', handleKey)
+    }
   }, [props.url]);
 
   useEffect(() => {
@@ -334,9 +387,11 @@ function Excel(props: ExcelProps) {
           style={{
             display: 'none',
             position: 'absolute',
-            borderWidth: 0,
-            boxShadow: 'rgb(16, 153, 104) 0px 0px 0px 1.5px',
-            pointerEvents: 'none'
+            // borderWidth: 0,
+            // boxShadow: 'rgb(16, 153, 104) 0px 0px 0px 1.5px',
+            border: '1.5px rgb(16, 153, 104) solid',
+            pointerEvents: 'none',
+            // clipPath: 'polygon(50% 0%, 101% 0%, 101% 101%, 50% 101%)'
           }}
         />
 
