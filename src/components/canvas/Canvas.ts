@@ -149,11 +149,7 @@ export class ExcelCanvas {
       currentScroll?.scrollY ?? this.viewport.scrollY);
 
     let cellLeft = indexColumnWidth;
-    // 单元格滚动一部分的差值
-    let scrollXDiff: number | undefined = undefined;
-
     let cellTop = h2px(defaultRowHeight);
-    let scrollYDiff: number | undefined = undefined;
 
     this.renderColumns = []
     this.renderRows = []
@@ -176,7 +172,8 @@ export class ExcelCanvas {
         if (cell.isMerged) {
           const merge = this.sheetItem.merges.find(
             (item) => item.address === cell.master._address,
-          );
+          )
+
           if (merge) {
             // 合并的单元格中有在 viewport 的，需要将合并的单元格都渲染出来
             if ((isRowInViewport && isColumnInViewport)) {
@@ -189,41 +186,16 @@ export class ExcelCanvas {
                   this.renderColumns.push(cellMerge._column)
                 }
               })
-
-              // const cellLeftMerge = merge.cells.slice(0, index).reduce((pre, cur) => pre + w2px(cur._column.width), 0)
-              // const cellTopMerge = merge.cells.slice(0, index).reduce((pre, cur) => pre + h2px(cur._row.height), 0)
-
-              // 此时，滚动条应该处于合并的大格子上，差值就是当前滚动的距离
-              if (scrollXDiff === undefined) {
-                // console.log('scrollX cellLeftMerge', scrollX, cellLeftMerge)
-                scrollXDiff = scrollX
-              }
-
-              if (scrollYDiff === undefined) {
-                scrollYDiff = scrollY
-              }
             }
           }
         }
 
-        if (cell._address === 'AL1') {
-          // console.log('isColumnInViewport', cellLeft, cellLeft + cellWidth, scrollX, scrollX + width, isColumnInViewportFn(cellLeft, cellLeft + cellWidth))
-        }
-
         if (isColumnPushAble()) {
           this.renderColumns.push(column)
-
-          if (scrollXDiff === undefined) {
-            scrollXDiff = scrollX - cellLeft + indexColumnWidth;
-          }
         }
 
         if (isRowPushAble()) {
           this.renderRows.push(row)
-
-          if (scrollYDiff === undefined) {
-            scrollYDiff = scrollY - cellTop + h2px(defaultRowHeight);
-          }
         }
 
         cellLeft += w2px(column.width);
@@ -232,9 +204,30 @@ export class ExcelCanvas {
       cellTop += h2px(row.height);
     })
 
-    this.viewport.scrollXDiff = scrollXDiff;
-    this.viewport.scrollYDiff = scrollYDiff;
+    // 排序
+    this.renderRows = this.renderRows.sort((a, b) => a.number - b.number)
+    this.renderColumns = this.renderColumns.sort((a, b) => a.number - b.number)
 
+    let t = 0
+    for (const r of rows) {
+      if (this.renderRows[0].number === r.number) {
+        break
+      }
+      t += h2px(r.height)
+    }
+
+    let l = 0
+    for (const c of columns) {
+      if (this.renderColumns[0].number === c.number) {
+        break
+      }
+      l += w2px(c.width)
+    }
+
+    // 单元格滚动一部分的差值 =
+    // 滚动条的位置 - 当前渲染的起始行列的位置
+    this.viewport.scrollXDiff = scrollX - l
+    this.viewport.scrollYDiff = scrollY - t
     // console.log('渲染列', this.renderColumns[0].letter, this.renderColumns[this.renderColumns.length - 1].letter)
     // console.log('渲染行', this.renderRows[0].number, this.renderRows[this.renderRows.length - 1].number)
   }

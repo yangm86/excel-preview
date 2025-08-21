@@ -335,7 +335,8 @@ function Excel(props: ExcelProps) {
             display: 'none',
             position: 'absolute',
             borderWidth: 0,
-            boxShadow: 'rgb(16, 153, 104) 0px 0px 0px 1.5px'
+            boxShadow: 'rgb(16, 153, 104) 0px 0px 0px 1.5px',
+            pointerEvents: 'none'
           }}
         />
 
