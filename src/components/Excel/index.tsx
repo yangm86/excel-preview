@@ -311,6 +311,7 @@ function Excel(props: ExcelProps) {
         },
       );
       virtualScroll.listen(ref.current);
+      virtualScroll.renderScrollbar(currentRender.ctx);
     }
 
     return () => {

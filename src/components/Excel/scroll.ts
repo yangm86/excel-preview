@@ -53,26 +53,12 @@ export const virtualScroll = {
     let dragStartY = 0;
     let dragStartX = 0;
     // 之前的值
-    let preScrollTop = 0;
-    let preScrollLeft = 0;
+    // let preScrollTop = 0;
+    // let preScrollLeft = 0;
 
     this.handleWheel = (e: WheelEvent) => {
       e.preventDefault();
 
-      // 垂直滚动 (deltaY 处理不同浏览器兼容性)
-      // this.scrollTop = Math.max(0,
-      //   Math.min(
-      //     this.contentHeight - this.viewportHeight,
-      //     this.scrollTop + e.deltaY
-      //   )
-      // );
-      // 水平滚动 (deltaX 处理不同浏览器兼容性)
-      // this.scrollLeft = Math.max(0,
-      //   Math.min(
-      //     this.contentWidth - this.viewportWidth,
-      //     this.scrollLeft + e.deltaX
-      //   )
-      // );
       this.scrollLeft += e.deltaX;
       this.scrollTop += e.deltaY;
 
@@ -106,23 +92,43 @@ export const virtualScroll = {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      const { thumbHeight, thumbWidth, thumbPositionY, thumbPositionX } = this.getScrollbarMetrics();
 
-      preScrollTop = this.scrollTop;
-      preScrollLeft = this.scrollLeft;
+      // preScrollTop = this.scrollTop;
+      // preScrollLeft = this.scrollLeft;
 
-      // 检查是否点击在滚动条上
-      // if (x > this.viewportWidth - this.scrollbarSize) {
-      //   this.isDragging = true;
-      //   dragStartY = y - this.getScrollbarMetrics().thumbPositionY;
+      // 重置拖拽起始位置
+      dragStartX = 0;
+      dragStartY = 0;
+
+      // 检查是否点击在垂直滚动条滑块上
+      if (x >= this.viewportWidth - this.scrollbarSize &&
+          y >= thumbPositionY &&
+          y <= thumbPositionY + thumbHeight) {
+        this.isDragging = true;
+        dragStartY = y - thumbPositionY;
+      }
+      // 检查是否点击在水平滚动条滑块上
+      else if (y >= this.viewportHeight - this.scrollbarSize &&
+               x >= thumbPositionX &&
+               x <= thumbPositionX + thumbWidth) {
+        this.isDragging = true;
+        dragStartX = x - thumbPositionX;
+      }
+      // // 检查是否点击在垂直滚动条轨道上（非滑块部分）
+      // else if (x >= this.viewportWidth - this.scrollbarSize) {
+      //   // 点击轨道时，直接跳转到对应位置
+      //   const clickRatio = y / this.viewportHeight;
+      //   this.scrollTop = clickRatio * this.contentHeight;
+      //   this.renderViewport();
       // }
-      // if (y > this.viewportHeight - this.scrollbarSize) {
-      //   this.isDragging = true;
-      //   dragStartX = x - this.getScrollbarMetrics().thumbPositionX;
+      // // 检查是否点击在水平滚动条轨道上（非滑块部分）
+      // else if (y >= this.viewportHeight - this.scrollbarSize) {
+      //   // 点击轨道时，直接跳转到对应位置
+      //   const clickRatio = x / this.viewportWidth;
+      //   this.scrollLeft = clickRatio * this.contentWidth;
+      //   this.renderViewport();
       // }
-
-      this.isDragging = true;
-      dragStartX = x;
-      dragStartY = y;
     };
 
     this.handleMousemove = (e: MouseEvent) => {
@@ -131,53 +137,68 @@ export const virtualScroll = {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      const { thumbHeight, thumbWidth } = this.getScrollbarMetrics();
+
+      // 获取当前滚动条滑块位置
+      const currentThumbPositionY = (this.scrollTop / this.contentHeight) * this.viewportHeight;
+      const currentThumbPositionX = (this.scrollLeft / this.contentWidth) * this.viewportWidth;
+
+      // 记录拖拽开始时点击的是哪个滚动条
+      // 垂直滚动条拖拽标记
+      const isDraggingVertical = dragStartY !== 0 && Math.abs(currentThumbPositionY - (y - dragStartY)) < thumbHeight * 2;
+      // 水平滚动条拖拽标记
+      const isDraggingHorizontal = dragStartX !== 0 && Math.abs(currentThumbPositionX - (x - dragStartX)) < thumbWidth * 2;
 
       // 计算新的滚动位置
-      // const newThumbPosY = Math.max(0,
-      //   Math.min(
-      //     this.viewportHeight - this.getScrollbarMetrics().thumbHeight,
-      //     y - dragStartY
-      //   )
-      // );
-      // const newThumbPosX = Math.max(0,
-      //   Math.min(
-      //     this.viewportWidth - this.getScrollbarMetrics().thumbHeight,
-      //     x - dragStartX
-      //   )
-      // );
-      const newThumbPosX = dragStartX - x;
-      const newThumbPosY = dragStartY - y;
+      if (isDraggingVertical) {
+        // 垂直滚动条拖拽
+        const availableHeight = this.viewportHeight - thumbHeight;
+        const newThumbPosY = Math.max(0, Math.min(availableHeight, y - dragStartY));
+        const scrollRatio = newThumbPosY / availableHeight;
+        this.scrollTop = scrollRatio * (this.contentHeight - this.viewportHeight + this.scrollbarSize);
+      } else if (isDraggingHorizontal) {
+        // 水平滚动条拖拽
+        const availableWidth = this.viewportWidth - thumbWidth;
+        const newThumbPosX = Math.max(0, Math.min(availableWidth, x - dragStartX));
+        const scrollRatio = newThumbPosX / availableWidth;
+        this.scrollLeft = scrollRatio * (this.contentWidth - this.viewportWidth + this.scrollbarSize);
+      }
 
-      this.scrollTop =
-        preScrollTop +
-        (newThumbPosY / this.viewportHeight) * this.contentHeight;
-      this.scrollLeft =
-        preScrollLeft + (newThumbPosX / this.viewportWidth) * this.contentWidth;
+      // 确保滚动位置在有效范围内
       if (this.scrollTop < 0) {
         this.scrollTop = 0;
+      } else if (this.scrollTop > this.contentHeight - this.viewportHeight + this.scrollbarSize) {
+        this.scrollTop = this.contentHeight - this.viewportHeight + this.scrollbarSize;
       }
+
       if (this.scrollLeft < 0) {
         this.scrollLeft = 0;
+      } else if (this.scrollLeft > this.contentWidth - this.viewportWidth + this.scrollbarSize) {
+        this.scrollLeft = this.contentWidth - this.viewportWidth + this.scrollbarSize;
       }
+
       this.renderViewport();
     };
 
     this.handleMouseup = () => {
       this.isDragging = false;
+      // 重置拖拽起始位置
+      dragStartX = 0;
+      dragStartY = 0;
     };
 
     // 鼠标滚轮事件
     canvas.addEventListener('wheel', this.handleWheel);
-    // canvas.addEventListener('mousedown', this.handleMousedown);
-    // document.addEventListener('mousemove', this.handleMousemove);
-    // document.addEventListener('mouseup', this.handleMouseup);
+    canvas.addEventListener('mousedown', this.handleMousedown);
+    document.addEventListener('mousemove', this.handleMousemove);
+    document.addEventListener('mouseup', this.handleMouseup);
   },
 
   unListen(canvas: HTMLCanvasElement) {
     canvas.removeEventListener('wheel', this.handleWheel);
-    // canvas.removeEventListener('mousedown', this.handleMousedown);
-    // document.removeEventListener('mousemove', this.handleMousemove);
-    // document.removeEventListener('mouseup', this.handleMouseup);
+    canvas.removeEventListener('mousedown', this.handleMousedown);
+    document.removeEventListener('mousemove', this.handleMousemove);
+    document.removeEventListener('mouseup', this.handleMouseup);
   },
 
   renderScrollbar(ctx: CanvasRenderingContext2D) {
