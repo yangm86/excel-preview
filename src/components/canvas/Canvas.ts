@@ -433,22 +433,26 @@ export class ExcelCanvas {
     });
 
     // 渲染表头第一个占位
-    this.ctx.fillStyle = headerBg;
-    this.ctx.strokeStyle = headerBd;
-    const x = originX;
-    const y = originY;
-    this.ctx.fillRect(
-      x,
-      y,
-      indexColumnWidth - originX * 2,
-      h2px(defaultRowHeight),
-    );
-    this.ctx.strokeRect(
-      x,
-      y,
-      indexColumnWidth - originX * 2,
-      h2px(defaultRowHeight),
-    );
+    if (this.renderColumns.length || this.renderRows.length) {
+      this.ctx.fillStyle = headerBg;
+      this.ctx.strokeStyle = headerBd;
+      const x = originX;
+      const y = originY;
+      this.ctx.fillRect(
+        x,
+        y,
+        indexColumnWidth - originX * 2,
+        h2px(defaultRowHeight),
+      );
+      this.ctx.strokeRect(
+        x,
+        y,
+        indexColumnWidth - originX * 2,
+        h2px(defaultRowHeight),
+      );
+    } else {
+      this.ctx.fillText('当前页没有数据～', this.viewport.width / 2 - 30, this.viewport.height / 2);
+    }
 
     await this.renderImages();
 

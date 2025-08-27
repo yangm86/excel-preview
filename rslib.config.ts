@@ -5,7 +5,7 @@ export default defineConfig({
   lib: [
     {
       format: 'esm',
-      syntax: 'es2020',
+      syntax: 'es2015',
       // bundle: false
       dts: {
         bundle: {
@@ -13,10 +13,17 @@ export default defineConfig({
           bundledPackages: [],
         },
       },
+      autoExternal: {
+        dependencies: true,
+        optionalDependencies: true,
+        peerDependencies: true,
+        devDependencies: true,
+      }
     },
   ],
   output: {
     target: 'web',
+    // overrideBrowserslist: []
   },
   source: {
     entry: {
