@@ -126,7 +126,9 @@ function Excel(props: ExcelProps) {
         }
       }
     }
-    window.addEventListener('keydown', handleKey)
+    if (props.cellClickEnable) {
+      window.addEventListener('keydown', handleKey)
+    }
 
     let responseContentType: string;
     fetch(props.url)
