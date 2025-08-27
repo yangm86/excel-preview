@@ -417,7 +417,7 @@ function Excel(props: ExcelProps) {
               display: 'flex',
               height: '100%',
               overflow: 'auto',
-              paddingLeft: 50,
+              paddingLeft: 15,
               width: '100%',
             }}
           >
