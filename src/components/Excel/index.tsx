@@ -15,6 +15,7 @@ type ExcelProps = {
   onInitLoad?: () => void;
   onError?: (err: Error) => void;
   LoadingComponent?: React.FC<{ message?: string }>;
+  cellClickEnable?: boolean
 };
 
 const parseUnLogin = (text: string) => {
@@ -379,7 +380,7 @@ function Excel(props: ExcelProps) {
       >
         <canvas
           ref={ref}
-          onClick={handleCanvasClick}
+          onClick={props.cellClickEnable ? handleCanvasClick : () => {}}
         />
 
         <div
