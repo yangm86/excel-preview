@@ -92,7 +92,8 @@ export const virtualScroll = {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      const { thumbHeight, thumbWidth, thumbPositionY, thumbPositionX } = this.getScrollbarMetrics();
+      const { thumbHeight, thumbWidth, thumbPositionY, thumbPositionX } =
+        this.getScrollbarMetrics();
 
       // preScrollTop = this.scrollTop;
       // preScrollLeft = this.scrollLeft;
@@ -102,16 +103,20 @@ export const virtualScroll = {
       dragStartY = 0;
 
       // 检查是否点击在垂直滚动条滑块上
-      if (x >= this.viewportWidth - this.scrollbarSize &&
-          y >= thumbPositionY &&
-          y <= thumbPositionY + thumbHeight) {
+      if (
+        x >= this.viewportWidth - this.scrollbarSize &&
+        y >= thumbPositionY &&
+        y <= thumbPositionY + thumbHeight
+      ) {
         this.isDragging = true;
         dragStartY = y - thumbPositionY;
       }
       // 检查是否点击在水平滚动条滑块上
-      else if (y >= this.viewportHeight - this.scrollbarSize &&
-               x >= thumbPositionX &&
-               x <= thumbPositionX + thumbWidth) {
+      else if (
+        y >= this.viewportHeight - this.scrollbarSize &&
+        x >= thumbPositionX &&
+        x <= thumbPositionX + thumbWidth
+      ) {
         this.isDragging = true;
         dragStartX = x - thumbPositionX;
       }
@@ -140,41 +145,65 @@ export const virtualScroll = {
       const { thumbHeight, thumbWidth } = this.getScrollbarMetrics();
 
       // 获取当前滚动条滑块位置
-      const currentThumbPositionY = (this.scrollTop / this.contentHeight) * this.viewportHeight;
-      const currentThumbPositionX = (this.scrollLeft / this.contentWidth) * this.viewportWidth;
+      const currentThumbPositionY =
+        (this.scrollTop / this.contentHeight) * this.viewportHeight;
+      const currentThumbPositionX =
+        (this.scrollLeft / this.contentWidth) * this.viewportWidth;
 
       // 记录拖拽开始时点击的是哪个滚动条
       // 垂直滚动条拖拽标记
-      const isDraggingVertical = dragStartY !== 0 && Math.abs(currentThumbPositionY - (y - dragStartY)) < thumbHeight * 2;
+      const isDraggingVertical =
+        dragStartY !== 0 &&
+        Math.abs(currentThumbPositionY - (y - dragStartY)) < thumbHeight * 2;
       // 水平滚动条拖拽标记
-      const isDraggingHorizontal = dragStartX !== 0 && Math.abs(currentThumbPositionX - (x - dragStartX)) < thumbWidth * 2;
+      const isDraggingHorizontal =
+        dragStartX !== 0 &&
+        Math.abs(currentThumbPositionX - (x - dragStartX)) < thumbWidth * 2;
 
       // 计算新的滚动位置
       if (isDraggingVertical) {
         // 垂直滚动条拖拽
         const availableHeight = this.viewportHeight - thumbHeight;
-        const newThumbPosY = Math.max(0, Math.min(availableHeight, y - dragStartY));
+        const newThumbPosY = Math.max(
+          0,
+          Math.min(availableHeight, y - dragStartY),
+        );
         const scrollRatio = newThumbPosY / availableHeight;
-        this.scrollTop = scrollRatio * (this.contentHeight - this.viewportHeight + this.scrollbarSize);
+        this.scrollTop =
+          scrollRatio *
+          (this.contentHeight - this.viewportHeight + this.scrollbarSize);
       } else if (isDraggingHorizontal) {
         // 水平滚动条拖拽
         const availableWidth = this.viewportWidth - thumbWidth;
-        const newThumbPosX = Math.max(0, Math.min(availableWidth, x - dragStartX));
+        const newThumbPosX = Math.max(
+          0,
+          Math.min(availableWidth, x - dragStartX),
+        );
         const scrollRatio = newThumbPosX / availableWidth;
-        this.scrollLeft = scrollRatio * (this.contentWidth - this.viewportWidth + this.scrollbarSize);
+        this.scrollLeft =
+          scrollRatio *
+          (this.contentWidth - this.viewportWidth + this.scrollbarSize);
       }
 
       // 确保滚动位置在有效范围内
       if (this.scrollTop < 0) {
         this.scrollTop = 0;
-      } else if (this.scrollTop > this.contentHeight - this.viewportHeight + this.scrollbarSize) {
-        this.scrollTop = this.contentHeight - this.viewportHeight + this.scrollbarSize;
+      } else if (
+        this.scrollTop >
+        this.contentHeight - this.viewportHeight + this.scrollbarSize
+      ) {
+        this.scrollTop =
+          this.contentHeight - this.viewportHeight + this.scrollbarSize;
       }
 
       if (this.scrollLeft < 0) {
         this.scrollLeft = 0;
-      } else if (this.scrollLeft > this.contentWidth - this.viewportWidth + this.scrollbarSize) {
-        this.scrollLeft = this.contentWidth - this.viewportWidth + this.scrollbarSize;
+      } else if (
+        this.scrollLeft >
+        this.contentWidth - this.viewportWidth + this.scrollbarSize
+      ) {
+        this.scrollLeft =
+          this.contentWidth - this.viewportWidth + this.scrollbarSize;
       }
 
       this.renderViewport();

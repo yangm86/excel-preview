@@ -1,36 +1,18 @@
-import type { SheetItem } from '../Excel/types.ts';
+import type {
+  SheetItem,
+  IRow,
+  IColumn,
+  Cell,
+  ExcelCanvasOptions,
+} from '../Excel/types.ts';
 import { w2px, h2px, argb2rgb, getFontColor } from './utils.ts';
 import type {
-  Cell as ExcelCell,
-  Column,
-  Row,
   CellRichTextValue,
   FillPattern,
   Image,
   CellHyperlinkValue,
 } from 'exceljs';
 import dayjs from 'dayjs';
-
-type Cell = ExcelCell & {
-  _address: string;
-  _column: Column;
-  _row: Row;
-  master: Cell;
-};
-type ExcelCanvasOptions = {
-  sheetItem: SheetItem;
-  canvas: HTMLCanvasElement;
-  viewport: {
-    width: number;
-    height: number;
-    scrollX: number;
-    scrollY: number;
-    scrollXDiff?: number;
-    scrollYDiff?: number;
-  };
-  onInitLoad?: () => void;
-  onError?: (error: Error) => void;
-};
 
 const indexColumnWidth = 50;
 const lineWidth = 1;
@@ -77,8 +59,8 @@ export class ExcelCanvas {
 
   public viewport: ExcelCanvasOptions['viewport'];
 
-  private renderColumns: Column[] = [];
-  private renderRows: Row[] = [];
+  private renderColumns: IColumn[] = [];
+  private renderRows: IRow[] = [];
 
   public cellsInfo: CellInfo[] = [];
 
@@ -136,11 +118,13 @@ export class ExcelCanvas {
   // 以及滚动差值
   calculateRenderCells(currentScroll?: { scrollX: number; scrollY: number }) {
     const {
-      columns,
-      rows,
+      columns: _columns,
+      rows: _rows,
       worksheet: {
         properties: { defaultRowHeight },
       },
+      rowsSlice,
+      columnsSlice,
     } = this.sheetItem;
     const { width, height } = this.viewport;
     // console.log(width, scrollX)
@@ -149,88 +133,116 @@ export class ExcelCanvas {
     const scrollY = (this.viewport.scrollY =
       currentScroll?.scrollY ?? this.viewport.scrollY);
 
-    let cellLeft = indexColumnWidth;
-    let cellTop = h2px(defaultRowHeight);
+    this.renderColumns = [];
+    this.renderRows = [];
 
-    this.renderColumns = []
-    this.renderRows = []
-    rows.forEach(row => {
+    // 找到起始行
+    const rowSliceIndex = rowsSlice.findIndex((x) => x[0] > scrollY);
+    // console.log('rowSliceIndex', rowSliceIndex, rowsSlice[rowSliceIndex - 1])
+    const [_, rowIndexFromSlice, rowTopFromSlice] = rowsSlice[
+      rowSliceIndex - 1
+    ] ?? [0, 0, 0];
+    const rows = _rows.slice(rowIndexFromSlice);
+
+    // 找到起始列
+    const columnSliceIndex = columnsSlice.findIndex((x) => x[0] > scrollX);
+    const [_2, columnIndexFromSlice, columnLeftFromSlice] = columnsSlice[
+      columnSliceIndex - 1
+    ] ?? [0, 0, 0];
+    const columns = _columns.slice(columnIndexFromSlice);
+
+    // 初始左右距离
+    let cellLeft = indexColumnWidth + columnLeftFromSlice;
+    let cellTop = h2px(defaultRowHeight) + rowTopFromSlice;
+
+    // 遍历行
+    let rowsWhileCount = 0;
+    for (const row of rows) {
+      rowsWhileCount += 1;
+
+      const cellHeight = h2px(row.height);
+      const isRowInViewport =
+        cellTop < scrollY + height && cellTop + cellHeight > scrollY;
+
+      if (isRowInViewport) {
+        this.renderRows.push(row);
+      } else if (this.renderRows.length) {
+        // console.log('rowsWhileCount', rowsWhileCount)
+        break;
+      }
+
+      cellTop += cellHeight;
+    }
+
+    // 遍历列
+    let columnsWhileCount = 0;
+    for (const column of columns) {
+      columnsWhileCount += 1;
+
+      const cellWidth = w2px(column.width);
+      const isColumnInViewport =
+        cellLeft < scrollX + width && cellLeft + cellWidth > scrollX;
+      if (isColumnInViewport) {
+        this.renderColumns.push(column);
+      } else if (this.renderColumns.length) {
+        // console.log('columnsWhileCount', columnsWhileCount)
+        break;
+      }
+      cellLeft += cellWidth;
+    }
+
+    // 处理合并单元格所在的行和列
+    this.renderRows.forEach((row) => {
       cellLeft = indexColumnWidth;
 
-      columns.forEach(column => {
+      this.renderColumns.forEach((column) => {
         const cell = row.getCell(column.number) as Cell;
-        const cellWidth = w2px(column.width);
-        const cellHeight = h2px(row.height);
-
-        const isColumnInViewport = cellLeft < scrollX + width &&
-          cellLeft + cellWidth > scrollX
-        const isColumnPushAble = () => isColumnInViewport && this.renderColumns.every(x => x.number !== column.number)
-
-        const isRowInViewport = cellTop < scrollY + height &&
-          cellTop + cellHeight > scrollY
-        const isRowPushAble = () => isRowInViewport && this.renderRows.every(x => x.number !== row.number)
-
         if (cell.isMerged) {
           const merge = this.sheetItem.merges.find(
             (item) => item.address === cell.master._address,
-          )
+          );
 
           if (merge) {
             // 合并的单元格中有在 viewport 的，需要将合并的单元格都渲染出来
-            if ((isRowInViewport && isColumnInViewport)) {
-              merge.cells.forEach(_cellMerge => {
-                const cellMerge = _cellMerge as Cell
-                if (this.renderRows.every(x => x.number !== cellMerge._row.number)) {
-                  this.renderRows.push(cellMerge._row)
-                }
-                if (this.renderColumns.every(x => x.number !== cellMerge._column.number)) {
-                  this.renderColumns.push(cellMerge._column)
-                }
-              })
-            }
+            merge.cells.forEach((_cellMerge) => {
+              const cellMerge = _cellMerge as Cell;
+              if (
+                this.renderRows.every((x) => x.number !== cellMerge._row.number)
+              ) {
+                this.renderRows.push(cellMerge._row);
+              }
+              if (
+                this.renderColumns.every(
+                  (x) => x.number !== cellMerge._column.number,
+                )
+              ) {
+                this.renderColumns.push(cellMerge._column);
+              }
+            });
           }
         }
 
-        if (isColumnPushAble()) {
-          this.renderColumns.push(column)
-        }
-
-        if (isRowPushAble()) {
-          this.renderRows.push(row)
-        }
-
         cellLeft += w2px(column.width);
-      })
+      });
 
       cellTop += h2px(row.height);
-    })
+    });
 
     // 排序
-    this.renderRows = this.renderRows.sort((a, b) => a.number - b.number)
-    this.renderColumns = this.renderColumns.sort((a, b) => a.number - b.number)
+    this.renderRows = this.renderRows.sort((a, b) => a.number - b.number);
+    this.renderColumns = this.renderColumns.sort((a, b) => a.number - b.number);
 
-    let t = 0
-    for (const r of rows) {
-      if (this.renderRows[0].number === r.number) {
-        break
-      }
-      t += h2px(r.height)
-    }
-
-    let l = 0
-    for (const c of columns) {
-      if (this.renderColumns[0].number === c.number) {
-        break
-      }
-      l += w2px(c.width)
-    }
-
+    // 计算偏移
     // 单元格滚动一部分的差值 =
     // 滚动条的位置 - 当前渲染的起始行列的位置
-    this.viewport.scrollXDiff = scrollX - l
-    this.viewport.scrollYDiff = scrollY - t
+    this.viewport.scrollXDiff = scrollX - (this.renderColumns[0]?.left ?? 0);
+    this.viewport.scrollYDiff = scrollY - (this.renderRows[0]?.top ?? 0);
     // console.log('渲染列', this.renderColumns[0].letter, this.renderColumns[this.renderColumns.length - 1].letter)
-    // console.log('渲染行', this.renderRows[0].number, this.renderRows[this.renderRows.length - 1].number)
+    // console.log('遍历的列数', columnsWhileCount)
+    // console.log('渲染行', this.renderRows[0]?.number, this.renderRows[this.renderRows.length - 1]?.number)
+    // console.log('遍历的行数', rowsWhileCount)
+
+    // console.log('scrollY', scrollY, 'rowTopFromSlice', rowTopFromSlice, 'top', this.renderRows[0].top, 'scrollYDiff', this.viewport.scrollYDiff)
   }
 
   // zoom(scale: number) {
@@ -253,7 +265,7 @@ export class ExcelCanvas {
   }
 
   async render() {
-    this.cellsInfo = []
+    this.cellsInfo = [];
 
     const {
       worksheet: {
@@ -322,7 +334,7 @@ export class ExcelCanvas {
                 height: cellHeightMerge,
                 row: cell._row.number - 1,
                 col: cell._column.number - 1,
-                text: cell.text
+                text: cell.text,
               });
 
               this.renderCell(
@@ -365,7 +377,7 @@ export class ExcelCanvas {
             height: cellH,
             row: cell._row.number - 1,
             col: cell._column.number - 1,
-            text: cell.text
+            text: cell.text,
           });
           this.renderCell(calWidth, calHeight, cellW, cellH, cell.style);
           const richText = (cell.value as CellRichTextValue)?.richText;
@@ -451,14 +463,18 @@ export class ExcelCanvas {
         h2px(defaultRowHeight),
       );
     } else {
-      this.ctx.fillText('当前页没有数据～', this.viewport.width / 2 - 30, this.viewport.height / 2);
+      this.ctx.fillText(
+        '当前页没有数据～',
+        this.viewport.width / 2 - 30,
+        this.viewport.height / 2,
+      );
     }
 
     await this.renderImages();
 
     // this.canvas.height = Math.round(calHeight * this.dpr)
     // this.canvas.style.height = calHeight + 'px'
-    // console.log(calHeight)
+    // console.log('this.cellsInfo[0].y', this.cellsInfo[0].y, 'scrollYDiff', scrollYDiff)
   }
 
   renderCell(x: number, y: number, w: number, h: number, style: Cell['style']) {

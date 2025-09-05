@@ -1,4 +1,4 @@
-import { defineConfig } from "@rslib/core";
+import { defineConfig } from '@rslib/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 
 export default defineConfig({
@@ -18,7 +18,7 @@ export default defineConfig({
         optionalDependencies: true,
         peerDependencies: true,
         devDependencies: true,
-      }
+      },
     },
   ],
   output: {
@@ -29,7 +29,7 @@ export default defineConfig({
     entry: {
       // index: 'src/components/**',
       index: 'src/components/Excel/index.tsx',
-    }
+    },
   },
   plugins: [pluginReact(/** options here */)],
 });

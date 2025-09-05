@@ -1,21 +1,21 @@
 import React from 'react';
-import type {MouseEventHandler} from 'react'
+import type { MouseEventHandler } from 'react';
 import ExcelJS from 'exceljs';
-import type { Worksheet, Workbook, Row, Column, Cell } from 'exceljs';
+import type { Worksheet, Workbook } from 'exceljs';
 import { useEffect, useRef, useState } from 'react';
-import type { Merge, SheetItem } from './types';
+import type { IColumn, IRow, Merge, SheetItem, Cell } from './types';
 import { ExcelCanvas } from '../canvas/Canvas.ts';
 import type { CellInfo } from '../canvas/Canvas.ts';
 import * as XLSX from 'xlsx';
 import { virtualScroll } from './scroll';
-import {copyText, h2px} from "../canvas/utils.ts";
+import { copyText, h2px, w2px } from '../canvas/utils.ts';
 
 type ExcelProps = {
   url: string;
   onInitLoad?: () => void;
   onError?: (err: Error) => void;
   LoadingComponent?: React.FC<{ message?: string }>;
-  cellClickEnable?: boolean
+  cellClickEnable?: boolean;
 };
 
 const parseUnLogin = (text: string) => {
@@ -45,66 +45,78 @@ function Excel(props: ExcelProps) {
   const selectCellDivRef = useRef<HTMLDivElement>(null);
 
   const updateSelectCellStyle = () => {
-    if (selectCellRef.current && selectCellDivRef.current && excelCanvasInstance.current) {
-      const cell = excelCanvasInstance.current.cellsInfo.find((item) => item.id === selectCellRef.current)
+    if (
+      selectCellRef.current &&
+      selectCellDivRef.current &&
+      excelCanvasInstance.current
+    ) {
+      const cell = excelCanvasInstance.current.cellsInfo.find(
+        (item) => item.id === selectCellRef.current,
+      );
 
-      if (!cell) return
+      if (!cell) return;
 
-      const {x, y, width, height} = cell
-      selectCellDivRef.current.style.top = `${y}px`
-      selectCellDivRef.current.style.left = `${x}px`
-      selectCellDivRef.current.style.width = `${width}px`
-      selectCellDivRef.current.style.height = `${height}px`
-      selectCellDivRef.current.style.borderStyle = 'solid'
+      const { x, y, width, height } = cell;
+      selectCellDivRef.current.style.top = `${y}px`;
+      selectCellDivRef.current.style.left = `${x}px`;
+      selectCellDivRef.current.style.width = `${width}px`;
+      selectCellDivRef.current.style.height = `${height}px`;
+      selectCellDivRef.current.style.borderStyle = 'solid';
 
       // 处理单元格选中时的边框裁剪
-      const tRowHeight = h2px(18)
-      const tColWidth = 50
+      const tRowHeight = h2px(18);
+      const tColWidth = 50;
 
-      let topLeftX = '0%'
-      let topLeftY = '0%'
-      let topRightX = '100%'
-      let topRightY = '0%'
-      let bottomRightX = '100%'
-      let bottomRightY = '100%'
-      let bottomLeftX = '0%'
-      let bottomLeftY = '100%'
+      let topLeftX = '0%';
+      let topLeftY = '0%';
+      let topRightX = '100%';
+      let topRightY = '0%';
+      let bottomRightX = '100%';
+      let bottomRightY = '100%';
+      let bottomLeftX = '0%';
+      let bottomLeftY = '100%';
 
-      const { width: rootWidth, height: rootHeight } = rootRef.current!.getBoundingClientRect();
+      const { width: rootWidth, height: rootHeight } =
+        rootRef.current!.getBoundingClientRect();
       if (x < tColWidth) {
-        bottomLeftX = topLeftX = `${-x + tColWidth}px`
+        bottomLeftX = topLeftX = `${-x + tColWidth}px`;
       }
       if (y < tRowHeight) {
-        topLeftY = topRightY = `${-y + tRowHeight - 2}px`
+        topLeftY = topRightY = `${-y + tRowHeight - 2}px`;
       }
 
       if (x + width > rootWidth) {
-        bottomRightX = topRightX = `${x + width}px`
+        bottomRightX = topRightX = `${x + width}px`;
       }
       if (y + height > rootHeight) {
-        bottomRightY = bottomLeftY = `${y + height}px`
+        bottomRightY = bottomLeftY = `${y + height}px`;
       }
 
-      selectCellDivRef.current.style.clipPath = `polygon(${topLeftX} ${topLeftY}, ${topRightX} ${topRightY}, ${bottomRightX} ${bottomRightY}, ${bottomLeftX} ${bottomLeftY})`
+      selectCellDivRef.current.style.clipPath = `polygon(${topLeftX} ${topLeftY}, ${topRightX} ${topRightY}, ${bottomRightX} ${bottomRightY}, ${bottomLeftX} ${bottomLeftY})`;
       // console.log('selectCellDivRef.current.style.clipPath', selectCellDivRef.current.style.clipPath)
     }
-  }
+  };
 
   // 单元格选中
   const handleCanvasClick: MouseEventHandler<HTMLCanvasElement> = (e) => {
     // 根据单元格信息找到该单元格
     const cell = excelCanvasInstance.current?.cellsInfo.find((item) => {
-      if (e.pageX >= item.x && e.pageX <= item.x + item.width && e.pageY >= item.y && e.pageY <= item.y + item.height) {
-        return true
+      if (
+        e.pageX >= item.x &&
+        e.pageX <= item.x + item.width &&
+        e.pageY >= item.y &&
+        e.pageY <= item.y + item.height
+      ) {
+        return true;
       }
-    })
+    });
 
     if (cell && selectCellDivRef.current) {
-      selectCellRef.current = cell.id
+      selectCellRef.current = cell.id;
       selectCellDivRef.current.style.removeProperty('display');
-      updateSelectCellStyle()
+      updateSelectCellStyle();
     }
-  }
+  };
 
   useEffect(() => {
     if (!props.url) return;
@@ -116,18 +128,20 @@ function Excel(props: ExcelProps) {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         // e.preventDefault()
-        const cell = excelCanvasInstance.current?.cellsInfo.find(x => x.id === selectCellRef.current)
+        const cell = excelCanvasInstance.current?.cellsInfo.find(
+          (x) => x.id === selectCellRef.current,
+        );
         // console.log(cell?.text)
         if (cell?.text) {
-          copyText(cell.text)
+          copyText(cell.text);
           if (selectCellDivRef.current) {
-            selectCellDivRef.current.style.borderStyle = 'dashed'
+            selectCellDivRef.current.style.borderStyle = 'dashed';
           }
         }
       }
-    }
+    };
     if (props.cellClickEnable) {
-      window.addEventListener('keydown', handleKey)
+      window.addEventListener('keydown', handleKey);
     }
 
     let responseContentType: string;
@@ -171,6 +185,7 @@ function Excel(props: ExcelProps) {
           .then((workbook: Workbook) => {
             const sheetList: SheetItem[] = [];
 
+            const { clientWidth, clientHeight } = document.body;
             // console.log(workbook)
             workbook.eachSheet((worksheet: Worksheet, sheetId: number) => {
               const sheetItem: SheetItem = {
@@ -178,26 +193,53 @@ function Excel(props: ExcelProps) {
                 name: worksheet.name,
                 columns: [],
                 rows: [],
+                rowsSlice: [],
+                columnsSlice: [],
                 merges: [],
                 worksheet,
               };
+
               // set sheet column
+              let l = 0;
+              let lIndex = 1;
               for (let i = 0; i < worksheet.columnCount; i++) {
-                const column: Column = worksheet.getColumn(i + 1);
+                const column = worksheet.getColumn(i + 1) as IColumn;
                 if (column.hidden) {
                   continue;
+                } else {
+                  column.left = l;
+                  l += w2px(column.width);
                 }
+
+                if (l >= clientWidth * lIndex) {
+                  // 阈值、索引、做边距
+                  sheetItem.columnsSlice.push([clientWidth * lIndex, i, l]);
+                  lIndex += 1;
+                }
+
                 sheetItem.columns.push(column);
               }
+
               // set sheet row
+              let t = 0;
+              let tIndex = 1;
               for (let i = 0; i < worksheet.rowCount; i++) {
-                const row: Row = worksheet.getRow(i + 1);
+                const row = worksheet.getRow(i + 1) as IRow;
                 if (row.hidden) {
                   continue;
+                } else {
+                  row.top = t;
+                  t += h2px(row.height);
                 }
+
+                if (t >= clientHeight * tIndex) {
+                  sheetItem.rowsSlice.push([clientHeight * tIndex, i, t]);
+                  tIndex += 1;
+                }
+
                 // set sheet row cell merges
                 for (let j = 0; j < row.cellCount; j++) {
-                  const cell: Cell = row.getCell(j + 1);
+                  const cell = row.getCell(j + 1) as Cell;
                   // console.log('cell._address', cell.fullAddress)
                   if (cell.isMerged) {
                     const targetAddress: Merge | undefined =
@@ -216,6 +258,7 @@ function Excel(props: ExcelProps) {
                     }
                   }
                 }
+
                 sheetItem.rows.push(row);
               }
               // viewerParams.sheetList.push(sheetItem)
@@ -235,8 +278,8 @@ function Excel(props: ExcelProps) {
       });
 
     return () => {
-      window.removeEventListener('keydown', handleKey)
-    }
+      window.removeEventListener('keydown', handleKey);
+    };
   }, [props.url]);
 
   useEffect(() => {
@@ -308,7 +351,7 @@ function Excel(props: ExcelProps) {
             currentRender.render().then(() => {
               virtualScroll.renderScrollbar(currentRender.ctx);
               // 更新选中的单元格位置
-              updateSelectCellStyle()
+              updateSelectCellStyle();
             });
           });
         },
