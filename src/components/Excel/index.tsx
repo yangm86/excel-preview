@@ -272,8 +272,11 @@ function Excel(props: ExcelProps) {
           });
       })
       .catch((err) => {
-        setLoading(false);
-        setLoadingMessage(err.message);
+        // setLoading(false);
+        let msg = err?.message === 'Invalid row number in model'
+          ? '文件格式错误、请尝试使用 wps 或 office 打开再重新保存下文件！'
+          : err.message
+        setLoadingMessage(msg);
         props.onError?.(err);
       });
 
@@ -321,7 +324,7 @@ function Excel(props: ExcelProps) {
           }
         },
         onError: (err) => {
-          setLoading(false);
+          // setLoading(false);
           setLoadingMessage(err.message);
           props.onError?.(err);
         },

@@ -290,8 +290,8 @@ export class ExcelCanvas {
         // 获取每一个单元格
         const cell = row.getCell(column.number) as Cell;
 
-        if (cell._address === 'A3') {
-          // console.log(cell.model.type, cell.value)
+        if (cell._address === 'L4') {
+          // console.log(cell.model.type, cell)
           // console.log('x scrollXDiff', calWidth, scrollXDiff)
         }
 
@@ -559,7 +559,12 @@ export class ExcelCanvas {
         const utcValue = utcDays * 86400 * 1000; // 毫秒
         return new Date(utcValue);
       }
-      text = dayjs(excelDateToJSDate(text as number)).format('M月D日');
+      if (cell?.value instanceof Date) {
+        text = dayjs(excelDateToJSDate(text as number)).format('M月D日');
+      } else {
+        text = String(text);
+      }
+      // text = dayjs(excelDateToJSDate(text as number)).format('M月D日');
     } else if (valueType === 4) {
       // Date
       let format = 'YYYY/MM/DD';
