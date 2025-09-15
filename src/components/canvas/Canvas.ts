@@ -551,7 +551,7 @@ export class ExcelCanvas {
   ) {
     const {
       worksheet: {
-        properties: { defaultRowHeight },
+        properties: { defaultRowHeight = 15 },
       },
     } = this.sheetItem;
     const valueType = cell?.model?.type;
@@ -626,7 +626,7 @@ export class ExcelCanvas {
         textLines.length +
         textLines.reduce(
           (acc, cur) =>
-            acc + Math.floor(this.ctx.measureText(cur).width / cellWidth),
+            acc + Math.round(this.ctx.measureText(cur).width / cellWidth),
           0,
         );
       y = (cellHeight - textLinesCount * h2px(defaultRowHeight)) / 2;
@@ -634,6 +634,11 @@ export class ExcelCanvas {
         y = 0;
       }
       y += cellTop + 3;
+    }
+
+    if (cell?.address === 'C11') {
+      // console.log(y - cellTop, alignment?.vertical, defaultRowHeight)
+      // y = 0
     }
 
     // 逐行渲染
@@ -666,7 +671,7 @@ export class ExcelCanvas {
         if (lineX === undefined) {
           if (isTextCenter) {
             // const halfCharWidth = Math.max.apply(null, line.split('').map(x => this.ctx.measureText(x).width))
-            x = (cellWidth - this.ctx.measureText(line).width) / 2;
+            x = (cellWidth - Math.round(this.ctx.measureText(line).width)) / 2;
             if (x < 0) {
               x = 0;
             }
