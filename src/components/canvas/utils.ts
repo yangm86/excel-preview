@@ -50,6 +50,11 @@ export function h2px(excelHeight: number = 18) {
   return Math.round(excelHeight * (dpi / 72));
 }
 
+export function px2h(px: number) {
+  return px * (72 / dpi); // 或者 px / 1.333333
+  // return Math.round(px / 1.33333) // 或者 px / 1.333333
+}
+
 export function pxToPt(px: number) {
   return px * (72 / dpi); // 或者 px / 1.333333
 }

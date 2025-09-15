@@ -8,7 +8,7 @@ import { ExcelCanvas } from '../canvas/Canvas.ts';
 import type { CellInfo } from '../canvas/Canvas.ts';
 import * as XLSX from 'xlsx';
 import { virtualScroll } from './scroll';
-import { copyText, h2px, w2px } from '../canvas/utils.ts';
+import {copyText, h2px, px2h, w2px} from '../canvas/utils.ts';
 
 type ExcelProps = {
   url: string;
@@ -180,12 +180,37 @@ function Excel(props: ExcelProps) {
 
         // 资源下载完成
         setLoadingMessage('数据解析中...');
+
+        const { clientWidth, clientHeight } = document.body;
+        const getCanvasEmptyInstance = (defaultRowHeight: number) => new ExcelCanvas({
+          sheetItem: {
+            columns: [],
+            rows: [],
+            merges: [],
+            worksheet: {
+              // @ts-ignore
+              properties: {
+                defaultRowHeight,
+              },
+            },
+            rowsSlice: [],
+            columnsSlice: []
+          },
+          canvas: ref.current!,
+          viewport: {
+            width: clientWidth,
+            height: clientHeight,
+            scrollX: 0,
+            scrollY: 0,
+          },
+        })
+        let canvasEmptyInstance: ExcelCanvas;
+
         return new ExcelJS.Workbook().xlsx
           .load(buffer)
           .then((workbook: Workbook) => {
             const sheetList: SheetItem[] = [];
 
-            const { clientWidth, clientHeight } = document.body;
             // console.log(workbook)
             workbook.eachSheet((worksheet: Worksheet, sheetId: number) => {
               const sheetItem: SheetItem = {
@@ -198,6 +223,7 @@ function Excel(props: ExcelProps) {
                 merges: [],
                 worksheet,
               };
+              const { defaultRowHeight = 18 } = worksheet.properties;
 
               // set sheet column
               let l = 0;
@@ -206,10 +232,10 @@ function Excel(props: ExcelProps) {
                 const column = worksheet.getColumn(i + 1) as IColumn;
                 if (column.hidden) {
                   continue;
-                } else {
-                  column.left = l;
-                  l += w2px(column.width);
                 }
+
+                column.left = l;
+                l += w2px(column.width);
 
                 if (l >= clientWidth * lIndex) {
                   // 阈值、索引、做边距
@@ -227,20 +253,15 @@ function Excel(props: ExcelProps) {
                 const row = worksheet.getRow(i + 1) as IRow;
                 if (row.hidden) {
                   continue;
-                } else {
-                  row.top = t;
-                  t += h2px(row.height);
                 }
 
-                if (t >= clientHeight * tIndex) {
-                  sheetItem.rowsSlice.push([clientHeight * tIndex, i, t]);
-                  tIndex += 1;
-                }
+                // console.log('row.height', row.height)
+                const isRowNoHeight = row.height === undefined;
+                const rowCellHeightArr: number[] = []
 
                 // set sheet row cell merges
                 for (let j = 0; j < row.cellCount; j++) {
                   const cell = row.getCell(j + 1) as Cell;
-                  // console.log('cell._address', cell.fullAddress)
                   if (cell.isMerged) {
                     const targetAddress: Merge | undefined =
                       sheetItem.merges.find(
@@ -257,10 +278,41 @@ function Excel(props: ExcelProps) {
                       });
                     }
                   }
+
+                  if (isRowNoHeight) {
+                    // 如果没有高度，需要渲染每个单元格
+                    // 去获取最大的单元格高度
+                    canvasEmptyInstance ||= getCanvasEmptyInstance(defaultRowHeight)
+                    const { cellHeight } = canvasEmptyInstance.renderPlainText(
+                      0,
+                      0,
+                      w2px(cell._column.width!),
+                      0,
+                      cell.value,
+                      cell.style,
+                      cell
+                    )
+                    rowCellHeightArr.push(cellHeight)
+                  }
+                }
+
+                if (isRowNoHeight) {
+                  // console.log('rowCellHeightArr', rowCellHeightArr, px2h(Math.max.apply(null, rowCellHeightArr)), defaultRowHeight)
+                  row.height = px2h(Math.max.apply(null, rowCellHeightArr) ?? 0)
+                }
+
+                row.top = t;
+                t += h2px(row.height);
+                // console.log('row.height', h2px(row.height))
+
+                if (t >= clientHeight * tIndex) {
+                  sheetItem.rowsSlice.push([clientHeight * tIndex, i, t]);
+                  tIndex += 1;
                 }
 
                 sheetItem.rows.push(row);
               }
+              // console.log('rowsSlice', sheetItem.rowsSlice)
               // viewerParams.sheetList.push(sheetItem)
               sheetList.push(sheetItem);
             });

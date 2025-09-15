@@ -139,31 +139,35 @@ export class ExcelCanvas {
     // 找到起始行
     const rowSliceIndex = rowsSlice.findIndex((x) => x[0] > scrollY);
     // console.log('rowSliceIndex', rowSliceIndex, rowsSlice[rowSliceIndex - 1])
-    const [_, rowIndexFromSlice, rowTopFromSlice] = rowsSlice[
+    const [_, rowIndexFromSlice] = rowsSlice[
       rowSliceIndex - 1
     ] ?? [0, 0, 0];
     const rows = _rows.slice(rowIndexFromSlice);
+    // console.log(rows.map(x => x.number), rowTopFromSlice, rowSliceIndex, scrollY)
 
     // 找到起始列
     const columnSliceIndex = columnsSlice.findIndex((x) => x[0] > scrollX);
-    const [_2, columnIndexFromSlice, columnLeftFromSlice] = columnsSlice[
+    const [_2, columnIndexFromSlice] = columnsSlice[
       columnSliceIndex - 1
     ] ?? [0, 0, 0];
     const columns = _columns.slice(columnIndexFromSlice);
 
     // 初始左右距离
-    let cellLeft = indexColumnWidth + columnLeftFromSlice;
-    let cellTop = h2px(defaultRowHeight) + rowTopFromSlice;
+    // let cellTop = h2px(defaultRowHeight) + rowTopFromSlice;
 
     // 遍历行
     let rowsWhileCount = 0;
     for (const row of rows) {
       rowsWhileCount += 1;
+      const cellTop = h2px(defaultRowHeight) + row.top;
 
       const cellHeight = h2px(row.height);
       const isRowInViewport =
         cellTop < scrollY + height && cellTop + cellHeight > scrollY;
 
+      // if (row.number === 8) {
+      //   console.log('row.number', row.top, cellTop, scrollY + height, cellTop + cellHeight, scrollY)
+      // }
       if (isRowInViewport) {
         this.renderRows.push(row);
       } else if (this.renderRows.length) {
@@ -171,13 +175,15 @@ export class ExcelCanvas {
         break;
       }
 
-      cellTop += cellHeight;
+      // cellTop += cellHeight;
     }
 
     // 遍历列
     let columnsWhileCount = 0;
+    // let cellLeft = indexColumnWidth + columnLeftFromSlice;
     for (const column of columns) {
       columnsWhileCount += 1;
+      const cellLeft = indexColumnWidth + column.left
 
       const cellWidth = w2px(column.width);
       const isColumnInViewport =
@@ -188,12 +194,12 @@ export class ExcelCanvas {
         // console.log('columnsWhileCount', columnsWhileCount)
         break;
       }
-      cellLeft += cellWidth;
+      // cellLeft += cellWidth;
     }
 
     // 处理合并单元格所在的行和列
     this.renderRows.forEach((row) => {
-      cellLeft = indexColumnWidth;
+      // cellLeft = indexColumnWidth;
 
       this.renderColumns.forEach((column) => {
         const cell = row.getCell(column.number) as Cell;
@@ -222,10 +228,10 @@ export class ExcelCanvas {
           }
         }
 
-        cellLeft += w2px(column.width);
+        // cellLeft += w2px(column.width);
       });
 
-      cellTop += h2px(row.height);
+      // cellTop += h2px(row.height);
     });
 
     // 排序
@@ -283,7 +289,7 @@ export class ExcelCanvas {
     this.renderRows.forEach((row) => {
       // 重置累加位置
       calWidth = indexColumnWidth - scrollXDiff;
-      const rowHeight = h2px(row.height);
+      const rowHeight = h2px(row.height || defaultRowHeight);
 
       // 每一列
       this.renderColumns.forEach((column) => {
@@ -690,6 +696,11 @@ export class ExcelCanvas {
 
       y += h2px(defaultRowHeight);
     });
+
+    // console.log(cell?.address, y)
+    return {
+      cellHeight: y
+    }
   }
 
   renderRichText(
