@@ -45,6 +45,7 @@ export const virtualScroll = {
     const thumbPositionX =
       (this.scrollLeft / this.contentWidth) * this.viewportWidth;
 
+    // console.log({ thumbHeight, thumbWidth, thumbPositionY, thumbPositionX })
     return { thumbHeight, thumbWidth, thumbPositionY, thumbPositionX };
   },
 
@@ -102,8 +103,12 @@ export const virtualScroll = {
       dragStartX = 0;
       dragStartY = 0;
 
+      const hasHorizontalScrollbar = thumbWidth < this.viewportWidth;
+      const hasVerticalScrollbar = thumbHeight < this.viewportHeight;
+
       // 检查是否点击在垂直滚动条滑块上
       if (
+        hasVerticalScrollbar &&
         x >= this.viewportWidth - this.scrollbarSize &&
         y >= thumbPositionY &&
         y <= thumbPositionY + thumbHeight
@@ -113,6 +118,7 @@ export const virtualScroll = {
       }
       // 检查是否点击在水平滚动条滑块上
       else if (
+        hasHorizontalScrollbar &&
         y >= this.viewportHeight - this.scrollbarSize &&
         x >= thumbPositionX &&
         x <= thumbPositionX + thumbWidth
@@ -160,6 +166,7 @@ export const virtualScroll = {
         dragStartX !== 0 &&
         Math.abs(currentThumbPositionX - (x - dragStartX)) < thumbWidth * 2;
 
+      // console.log('isDraggingVertical', isDraggingVertical, 'isDraggingHorizontal', isDraggingHorizontal)
       // 计算新的滚动位置
       if (isDraggingVertical) {
         // 垂直滚动条拖拽
@@ -172,6 +179,17 @@ export const virtualScroll = {
         this.scrollTop =
           scrollRatio *
           (this.contentHeight - this.viewportHeight + this.scrollbarSize);
+
+        // 确保滚动位置在有效范围内
+        if (this.scrollTop < 0) {
+          this.scrollTop = 0;
+        } else if (
+          this.scrollTop >
+          this.contentHeight - this.viewportHeight + this.scrollbarSize
+        ) {
+          this.scrollTop =
+            this.contentHeight - this.viewportHeight + this.scrollbarSize;
+        }
       } else if (isDraggingHorizontal) {
         // 水平滚动条拖拽
         const availableWidth = this.viewportWidth - thumbWidth;
@@ -183,29 +201,20 @@ export const virtualScroll = {
         this.scrollLeft =
           scrollRatio *
           (this.contentWidth - this.viewportWidth + this.scrollbarSize);
+
+        // 确保滚动位置在有效范围内
+        if (this.scrollLeft < 0) {
+          this.scrollLeft = 0;
+        } else if (
+          this.scrollLeft >
+          this.contentWidth - this.viewportWidth + this.scrollbarSize
+        ) {
+          this.scrollLeft =
+            this.contentWidth - this.viewportWidth + this.scrollbarSize;
+        }
       }
 
-      // 确保滚动位置在有效范围内
-      if (this.scrollTop < 0) {
-        this.scrollTop = 0;
-      } else if (
-        this.scrollTop >
-        this.contentHeight - this.viewportHeight + this.scrollbarSize
-      ) {
-        this.scrollTop =
-          this.contentHeight - this.viewportHeight + this.scrollbarSize;
-      }
-
-      if (this.scrollLeft < 0) {
-        this.scrollLeft = 0;
-      } else if (
-        this.scrollLeft >
-        this.contentWidth - this.viewportWidth + this.scrollbarSize
-      ) {
-        this.scrollLeft =
-          this.contentWidth - this.viewportWidth + this.scrollbarSize;
-      }
-
+      // console.log('scrollTop', this.scrollTop, 'scrollLeft', this.scrollLeft)
       this.renderViewport();
     };
 

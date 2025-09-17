@@ -117,6 +117,7 @@ export class ExcelCanvas {
   // 展示哪些行、列数据
   // 以及滚动差值
   calculateRenderCells(currentScroll?: { scrollX: number; scrollY: number }) {
+    // console.log('scrollX', currentScroll?.scrollX, 'scrollY', currentScroll?.scrollY)
     const {
       columns: _columns,
       rows: _rows,
