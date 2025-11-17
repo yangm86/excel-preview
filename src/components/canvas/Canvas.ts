@@ -352,7 +352,8 @@ export class ExcelCanvas {
                 merge.master.style,
               );
 
-              const richText = (cell.value as CellRichTextValue)?.richText;
+              // @ts-ignore
+              const richText = (cell.value as CellHyperlinkValue)?.text?.richText || (cell.value as CellRichTextValue)?.richText;
               if (richText) {
                 this.renderRichText(
                   calWidth,
@@ -387,7 +388,8 @@ export class ExcelCanvas {
             text: cell.text,
           });
           this.renderCell(calWidth, calHeight, cellW, cellH, cell.style);
-          const richText = (cell.value as CellRichTextValue)?.richText;
+          // @ts-ignore
+          const richText = (cell.value as CellHyperlinkValue)?.text?.richText || (cell.value as CellRichTextValue)?.richText;
           if (richText) {
             this.renderRichText(calWidth, calHeight, cellW, richText, cell);
           } else {
@@ -580,7 +582,7 @@ export class ExcelCanvas {
       text = dayjs(text as Date).format(format);
     } else if (valueType === 5) {
       // Hyperlink
-      text = (text as CellHyperlinkValue)?.text;
+      text = (text as CellHyperlinkValue)?.text || text as string;
     } else {
       // String
       text = String(text);
@@ -731,7 +733,7 @@ export class ExcelCanvas {
       return val;
     });
 
-    this.renderPlainText(
+    return this.renderPlainText(
       cellLeft,
       cellTop,
       cellWidth,

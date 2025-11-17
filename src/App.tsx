@@ -7,7 +7,7 @@ const App = () => {
       <Excel
         // url="/example3.csv"
         // url="/example1.xlsx"
-        url="/00a645af024645dca37c3ef026e06b35.xlsx"
+        url="/144aebd642334e1397e9f7f550e13c5c.xlsx"
         // url="/2w_rows.xlsx"
         // url="https://pan.shinemo.com/remote.php/webdav/%E4%B8%80%E4%BD%93%E6%9C%BA%E7%89%88%E6%9C%AC%E5%BC%80%E5%8F%91%E8%AE%A1%E5%88%92.xlsx"
         onInitLoad={() => {

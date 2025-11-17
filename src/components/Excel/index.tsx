@@ -1,7 +1,7 @@
 import React from 'react';
 import type { MouseEventHandler } from 'react';
 import ExcelJS from 'exceljs';
-import type { Worksheet, Workbook } from 'exceljs';
+import type { Worksheet, Workbook, CellRichTextValue, CellHyperlinkValue } from 'exceljs';
 import { useEffect, useRef, useState } from 'react';
 import type { IColumn, IRow, Merge, SheetItem, Cell } from './types';
 import { ExcelCanvas } from '../canvas/Canvas.ts';
@@ -283,22 +283,35 @@ function Excel(props: ExcelProps) {
                     // 如果没有高度，需要渲染每个单元格
                     // 去获取最大的单元格高度
                     canvasEmptyInstance ||= getCanvasEmptyInstance(defaultRowHeight)
-                    const { cellHeight } = canvasEmptyInstance.renderPlainText(
-                      0,
-                      0,
-                      w2px(cell._column.width!),
-                      0,
-                      cell.value,
-                      cell.style,
-                      cell
-                    )
+                    // 链接里面是富文本
+                    // @ts-ignore
+                    const richText = (cell.value as CellHyperlinkValue)?.text?.richText ||
+                      (cell.value as CellRichTextValue)?.richText;
+
+                    const { cellHeight } = richText
+                      ? canvasEmptyInstance.renderRichText(
+                        0,
+                        0,
+                        w2px(cell._column.width!),
+                        richText,
+                        cell
+                      )
+                      : canvasEmptyInstance.renderPlainText(
+                        0,
+                        0,
+                        w2px(cell._column.width!),
+                        0,
+                        cell.value,
+                        cell.style,
+                        cell
+                      )
                     rowCellHeightArr.push(cellHeight)
                   }
                 }
 
                 if (isRowNoHeight) {
-                  // console.log('rowCellHeightArr', rowCellHeightArr, px2h(Math.max.apply(null, rowCellHeightArr)), defaultRowHeight)
-                  row.height = px2h(Math.max.apply(null, rowCellHeightArr) ?? 0)
+                  // console.log('rowCellHeightArr', rowCellHeightArr, Math.max.apply(null, rowCellHeightArr), px2h(Math.max.apply(null, rowCellHeightArr)))
+                  row.height = rowCellHeightArr.length ? px2h(Math.max.apply(null, rowCellHeightArr) ?? 0) : defaultRowHeight
                 }
 
                 row.top = t;
@@ -391,6 +404,7 @@ function Excel(props: ExcelProps) {
       // console.log(currentWidth, ref.current.offsetWidth)
       sheetBar.style.width = `${Math.min.call(null, currentWidth, ref.current.offsetWidth)}px`;
 
+      console.log(currentRender.realContentWidth, currentRender.realContentHeight)
       virtualScroll.init(
         viewportWidth,
         viewportHeight,
