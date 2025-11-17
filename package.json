@@ -10,6 +10,7 @@
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
     "preview": "rsbuild preview",
+    "prepublishOnly": "npm run build:lib",
     "build:lib": "rslib build"
   },
   "dependencies": {
