@@ -81,8 +81,6 @@ export class ExcelCanvas {
       },
     } = this.sheetItem;
 
-    const dpr = this.dpr;
-
     // 计算宽高
     this.realContentWidth = columns.reduce(
       (pre, cur) => pre + w2px(cur.width),
@@ -93,6 +91,19 @@ export class ExcelCanvas {
       h2px(defaultRowHeight) + originY,
     );
 
+    this.setCanvasSize();
+    this.ctx.lineWidth = lineWidth;
+    this.render()
+      .then(() => {
+        this.onInitLoad?.();
+      })
+      .catch((err) => {
+        this.onError?.(err);
+      });
+  }
+
+  setCanvasSize() {
+    const dpr = this.dpr;
     const canvasWidth = this.viewport.width;
     const canvasHeight = this.viewport.height;
     // console.log(1, canvasHeight)
@@ -102,15 +113,6 @@ export class ExcelCanvas {
 
     this.canvas.style.width = canvasWidth + 'px';
     this.canvas.style.height = canvasHeight + 'px';
-
-    this.ctx.lineWidth = lineWidth;
-    this.render()
-      .then(() => {
-        this.onInitLoad?.();
-      })
-      .catch((err) => {
-        this.onError?.(err);
-      });
   }
 
   // 计算当前视口返回+滚动条位置下

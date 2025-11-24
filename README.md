@@ -74,7 +74,7 @@ export default function App() {
 - [ ] 画布无限滚动自适应填充默认单元格
 - [ ] 文本右对齐，好像是 exceljs 不支持
 - [ ] 文本换行与溢出处理，目前默认是自动换行
-- [ ] resize 窗口自适应
+- [x] resize 窗口自适应
 
 ## 共建
 

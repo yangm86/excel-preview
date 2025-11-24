@@ -350,6 +350,16 @@ function Excel(props: ExcelProps) {
     };
   }, [props.url]);
 
+  const setSheetBarStyle = () => {
+    const sheetBar = ref.current!.parentNode!.querySelector(
+      '.excel-preview__bar',
+    ) as HTMLElement;
+    const sheetBarParent = ref.current!.parentNode as HTMLElement;
+    // sheetBar.style.width = `${currentRender.width}px`
+    const currentWidth = sheetBarParent.offsetWidth;
+    sheetBar.style.width = `${Math.min.call(null, currentWidth, ref.current!.offsetWidth)}px`;
+  }
+
   useEffect(() => {
     if (!currentSheetId || !ref.current || !rootRef.current) return;
 
@@ -396,13 +406,7 @@ function Excel(props: ExcelProps) {
       });
 
       // 设置 sheet 工具条的宽度
-      const sheetBar = ref.current.parentNode!.querySelector(
-        '.excel-preview__bar',
-      ) as HTMLElement;
-      // sheetBar.style.width = `${currentRender.width}px`
-      const currentWidth = sheetBar.offsetWidth;
-      // console.log(currentWidth, ref.current.offsetWidth)
-      sheetBar.style.width = `${Math.min.call(null, currentWidth, ref.current.offsetWidth)}px`;
+      setSheetBarStyle();
 
       console.log(currentRender.realContentWidth, currentRender.realContentHeight)
       virtualScroll.init(
@@ -434,6 +438,50 @@ function Excel(props: ExcelProps) {
       virtualScroll.unListen(ref.current!);
     };
   }, [currentSheetId, ref.current]);
+
+  useEffect(() => {
+    let timer: number;
+    const handleResize = () => {
+      // console.log(rootRef.current)
+      // console.log(excelCanvasInstance.current)
+      if (!rootRef.current || !excelCanvasInstance.current) return;
+
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const rootRect = rootRef.current!.getBoundingClientRect();
+        const viewportWidth = rootRect.width;
+        const viewportHeight = rootRect.height - 48;
+        const currentRender = excelCanvasInstance.current!;
+        // console.log(1, viewportWidth, viewportHeight)
+        currentRender.viewport.width = viewportWidth;
+        currentRender.viewport.height = viewportHeight;
+
+        virtualScroll.viewportWidth = viewportWidth;
+        virtualScroll.viewportHeight = viewportHeight;
+
+        currentRender.setCanvasSize();
+
+        setSheetBarStyle();
+
+        currentRender.calculateRenderCells({
+          scrollX: virtualScroll.scrollLeft,
+          scrollY: virtualScroll.scrollTop,
+        });
+        requestAnimationFrame(() => {
+          currentRender.destroy();
+          currentRender.render().then(() => {
+            virtualScroll.renderScrollbar(currentRender.ctx);
+            // 更新选中的单元格位置
+            updateSelectCellStyle();
+          });
+        });
+      }, 300);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    }
+  }, [])
 
   return (
     <div
