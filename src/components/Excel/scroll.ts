@@ -57,8 +57,6 @@ export const virtualScroll = {
     let dragStartY = 0;
     let dragStartX = 0;
     // 触摸事件相关变量
-    let touchStartX = 0;
-    let touchStartY = 0;
     let lastTouchX = 0;
     let lastTouchY = 0;
     // 之前的值
@@ -242,8 +240,6 @@ export const virtualScroll = {
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
       
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
       lastTouchX = touch.clientX;
       lastTouchY = touch.clientY;
       
@@ -403,8 +399,6 @@ export const virtualScroll = {
       // 重置拖拽起始位置
       dragStartX = 0;
       dragStartY = 0;
-      touchStartX = 0;
-      touchStartY = 0;
     };
 
     // 鼠标滚轮事件
