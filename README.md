@@ -64,7 +64,7 @@ export default function App() {
 - example3.csv csv 文件
 - example-large.xlsx 超大数据示例
 
-## 待实现
+## 功能特性
 
 - [x] 百万单元格分片处理，只要内存不炸，界面不卡
 - [ ] 放大缩小
@@ -75,6 +75,7 @@ export default function App() {
 - [ ] 文本右对齐，好像是 exceljs 不支持
 - [ ] 文本换行与溢出处理，目前默认是自动换行
 - [x] resize 窗口自适应
+- [ ] 支持 pad 和 移动端
 
 ## 共建
 

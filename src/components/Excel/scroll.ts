@@ -12,6 +12,9 @@ export const virtualScroll = {
   handleMousedown: (_e: MouseEvent) => {},
   handleMousemove: (_e: MouseEvent) => {},
   handleMouseup: (_e: MouseEvent) => {},
+  handleTouchstart: (_e: TouchEvent) => {},
+  handleTouchmove: (_e: TouchEvent) => {},
+  handleTouchend: (_e: TouchEvent) => {},
 
   init(
     viewportWidth: number,
@@ -53,6 +56,11 @@ export const virtualScroll = {
     // 滚动条拖拽事件
     let dragStartY = 0;
     let dragStartX = 0;
+    // 触摸事件相关变量
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
     // 之前的值
     // let preScrollTop = 0;
     // let preScrollLeft = 0;
@@ -225,11 +233,190 @@ export const virtualScroll = {
       dragStartY = 0;
     };
 
+    // 触摸开始事件（对应mousedown）
+    this.handleTouchstart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      lastTouchX = touch.clientX;
+      lastTouchY = touch.clientY;
+      
+      const { thumbHeight, thumbWidth, thumbPositionY, thumbPositionX } =
+        this.getScrollbarMetrics();
+
+      // 重置拖拽起始位置
+      dragStartX = 0;
+      dragStartY = 0;
+
+      const hasHorizontalScrollbar = thumbWidth < this.viewportWidth;
+      const hasVerticalScrollbar = thumbHeight < this.viewportHeight;
+
+      // 检查是否点击在垂直滚动条滑块上
+      if (
+        hasVerticalScrollbar &&
+        x >= this.viewportWidth - this.scrollbarSize &&
+        y >= thumbPositionY &&
+        y <= thumbPositionY + thumbHeight
+      ) {
+        this.isDragging = true;
+        dragStartY = y - thumbPositionY;
+        e.preventDefault();
+      }
+      // 检查是否点击在水平滚动条滑块上
+      else if (
+        hasHorizontalScrollbar &&
+        y >= this.viewportHeight - this.scrollbarSize &&
+        x >= thumbPositionX &&
+        x <= thumbPositionX + thumbWidth
+      ) {
+        this.isDragging = true;
+        dragStartX = x - thumbPositionX;
+        e.preventDefault();
+      }
+    };
+
+    // 触摸移动事件（对应mousemove + wheel滚动）
+    this.handleTouchmove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      // 如果正在拖拽滚动条
+      if (this.isDragging) {
+        e.preventDefault();
+        
+        const { thumbHeight, thumbWidth } = this.getScrollbarMetrics();
+
+        // 获取当前滚动条滑块位置
+        const currentThumbPositionY =
+          (this.scrollTop / this.contentHeight) * this.viewportHeight;
+        const currentThumbPositionX =
+          (this.scrollLeft / this.contentWidth) * this.viewportWidth;
+
+        // 垂直滚动条拖拽标记
+        const isDraggingVertical =
+          dragStartY !== 0 &&
+          Math.abs(currentThumbPositionY - (y - dragStartY)) < thumbHeight * 2;
+        // 水平滚动条拖拽标记
+        const isDraggingHorizontal =
+          dragStartX !== 0 &&
+          Math.abs(currentThumbPositionX - (x - dragStartX)) < thumbWidth * 2;
+
+        // 计算新的滚动位置
+        if (isDraggingVertical) {
+          // 垂直滚动条拖拽
+          const availableHeight = this.viewportHeight - thumbHeight;
+          const newThumbPosY = Math.max(
+            0,
+            Math.min(availableHeight, y - dragStartY),
+          );
+          const scrollRatio = newThumbPosY / availableHeight;
+          this.scrollTop =
+            scrollRatio *
+            (this.contentHeight - this.viewportHeight + this.scrollbarSize);
+
+          // 确保滚动位置在有效范围内
+          if (this.scrollTop < 0) {
+            this.scrollTop = 0;
+          } else if (
+            this.scrollTop >
+            this.contentHeight - this.viewportHeight + this.scrollbarSize
+          ) {
+            this.scrollTop =
+              this.contentHeight - this.viewportHeight + this.scrollbarSize;
+          }
+        } else if (isDraggingHorizontal) {
+          // 水平滚动条拖拽
+          const availableWidth = this.viewportWidth - thumbWidth;
+          const newThumbPosX = Math.max(
+            0,
+            Math.min(availableWidth, x - dragStartX),
+          );
+          const scrollRatio = newThumbPosX / availableWidth;
+          this.scrollLeft =
+            scrollRatio *
+            (this.contentWidth - this.viewportWidth + this.scrollbarSize);
+
+          // 确保滚动位置在有效范围内
+          if (this.scrollLeft < 0) {
+            this.scrollLeft = 0;
+          } else if (
+            this.scrollLeft >
+            this.contentWidth - this.viewportWidth + this.scrollbarSize
+          ) {
+            this.scrollLeft =
+              this.contentWidth - this.viewportWidth + this.scrollbarSize;
+          }
+        }
+
+        this.renderViewport();
+      } else {
+        // 触摸滚动（对应wheel事件）
+        const deltaX = lastTouchX - touch.clientX;
+        const deltaY = lastTouchY - touch.clientY;
+        
+        lastTouchX = touch.clientX;
+        lastTouchY = touch.clientY;
+
+        this.scrollLeft += deltaX;
+        this.scrollTop += deltaY;
+
+        if (
+          this.scrollLeft >=
+          this.contentWidth - this.viewportWidth + this.scrollbarSize
+        ) {
+          this.scrollLeft =
+            this.contentWidth - this.viewportWidth + this.scrollbarSize;
+        }
+        if (
+          this.scrollTop >=
+          this.contentHeight - this.viewportHeight + this.scrollbarSize
+        ) {
+          this.scrollTop =
+            this.contentHeight - this.viewportHeight + this.scrollbarSize;
+        }
+
+        if (this.scrollTop < 0) {
+          this.scrollTop = 0;
+        }
+        if (this.scrollLeft < 0) {
+          this.scrollLeft = 0;
+        }
+
+        this.renderViewport();
+        e.preventDefault();
+      }
+    };
+
+    // 触摸结束事件（对应mouseup）
+    this.handleTouchend = () => {
+      this.isDragging = false;
+      // 重置拖拽起始位置
+      dragStartX = 0;
+      dragStartY = 0;
+      touchStartX = 0;
+      touchStartY = 0;
+    };
+
     // 鼠标滚轮事件
     canvas.addEventListener('wheel', this.handleWheel);
     canvas.addEventListener('mousedown', this.handleMousedown);
     document.addEventListener('mousemove', this.handleMousemove);
     document.addEventListener('mouseup', this.handleMouseup);
+    
+    // 触摸事件
+    canvas.addEventListener('touchstart', this.handleTouchstart, { passive: false });
+    canvas.addEventListener('touchmove', this.handleTouchmove, { passive: false });
+    canvas.addEventListener('touchend', this.handleTouchend);
   },
 
   unListen(canvas: HTMLCanvasElement) {
@@ -237,6 +424,11 @@ export const virtualScroll = {
     canvas.removeEventListener('mousedown', this.handleMousedown);
     document.removeEventListener('mousemove', this.handleMousemove);
     document.removeEventListener('mouseup', this.handleMouseup);
+    
+    // 移除触摸事件
+    canvas.removeEventListener('touchstart', this.handleTouchstart);
+    canvas.removeEventListener('touchmove', this.handleTouchmove);
+    canvas.removeEventListener('touchend', this.handleTouchend);
   },
 
   renderScrollbar(ctx: CanvasRenderingContext2D) {
