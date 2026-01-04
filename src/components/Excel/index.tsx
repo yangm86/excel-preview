@@ -236,8 +236,9 @@ function Excel(props: ExcelProps) {
 
                 column.left = l;
                 l += w2px(column.width);
-
-                if (l >= clientWidth * lIndex) {
+                
+                // 处理列宽超过屏幕宽度的情况，确保所有阈值点都被记录
+                while (l >= clientWidth * lIndex) {
                   // 阈值、索引、做边距
                   sheetItem.columnsSlice.push([clientWidth * lIndex, i, l]);
                   lIndex += 1;
@@ -317,8 +318,9 @@ function Excel(props: ExcelProps) {
                 row.top = t;
                 t += h2px(row.height);
                 // console.log('row.height', h2px(row.height))
-
-                if (t >= clientHeight * tIndex) {
+                
+                // 处理行高超过屏幕高度的情况，确保所有阈值点都被记录
+                while (t >= clientHeight * tIndex) {
                   sheetItem.rowsSlice.push([clientHeight * tIndex, i, t]);
                   tIndex += 1;
                 }

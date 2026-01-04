@@ -168,7 +168,7 @@ export class ExcelCanvas {
       const isRowInViewport =
         cellTop < scrollY + height && cellTop + cellHeight > scrollY;
 
-      // if (row.number === 8) {
+      // if (row.number === 4) {
       //   console.log('row.number', row.top, cellTop, scrollY + height, cellTop + cellHeight, scrollY)
       // }
       if (isRowInViewport) {
